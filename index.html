@@ -716,70 +716,125 @@
     </div>
 
 <script>
-    // 完全使用本地存储（手机友好版）
-const JSONBIN_CONFIG = {
-  BIN_ID: '6908f3c4ae596e708f4237e0',
-  API_KEY: '$2a$10$g7DKdKCewYmzyOvyYXt6LeDlSff7kDdWRqUJaexE/gWUbsE3qgZlS' // 您的完整API Key
-};
-
-// 始终使用本地存储
-async function saveToJsonBin(data) {
-  console.log('使用本地存储保存');
-  localStorage.setItem('userArchives', JSON.stringify(data));
-  return true;
-}
-
-async function loadFromJsonBin() {
-  console.log('从本地存储加载');
-  const localData = localStorage.getItem('userArchives');
-  const result = localData ? JSON.parse(localData) : { users: {} };
-  
-  // 在手机上显示当前用户数量
-  const userCount = Object.keys(result.users || {}).length;
-  console.log(`当前用户数: ${userCount}`);
-  
-  return result;
-}
+    // 最简单版本 - 完全本地存储
+console.log('脚本已加载');
 
 // 删除相关变量
 let userToDelete = null;
 
-// 登录表单提交
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
+// 显示页面函数
+function showWelcomePage() {
+  console.log('显示欢迎页面');
+  hideAllPages();
+  document.getElementById('welcomePage').classList.remove('hidden');
+}
+
+function showAdminPage() {
+  console.log('显示管理员页面');
+  hideAllPages();
+  document.getElementById('adminPage').classList.remove('hidden');
+  loadUserGrid();
+}
+
+function enterArchive() {
+  console.log('进入档案页面');
+  hideAllPages();
+  showArchivePage();
+}
+
+function showArchivePage(username = null) {
+  const currentUser = username || localStorage.getItem('currentUser');
+  console.log('显示档案页面，用户:', currentUser);
+  
+  if (!currentUser) {
+    console.error('没有找到当前用户');
+    showLoginPage();
+    return;
+  }
+  
+  hideAllPages();
+  document.getElementById('archivePage').classList.remove('hidden');
+  
+  // 检查是否是管理员编辑模式
+  const isAdminEdit = username && username !== localStorage.getItem('currentUser');
+  const isAdmin = localStorage.getItem('currentUser') === 'Succubus';
+  
+  if (isAdminEdit) {
+    console.log('管理员编辑模式');
+    document.getElementById('normalSave').classList.add('hidden');
+    document.getElementById('adminSave').classList.remove('hidden');
+    document.getElementById('adminBackBtn').classList.remove('hidden');
+  } else {
+    console.log('普通用户模式');
+    document.getElementById('normalSave').classList.remove('hidden');
+    document.getElementById('adminSave').classList.add('hidden');
+    if (isAdmin) {
+      document.getElementById('adminBackBtn').classList.remove('hidden');
+    } else {
+      document.getElementById('adminBackBtn').classList.add('hidden');
+    }
+  }
+  
+  loadArchiveData(currentUser);
+}
+
+function showLoginPage() {
+  hideAllPages();
+  document.getElementById('loginPage').classList.remove('hidden');
+}
+
+function hideAllPages() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('welcomePage').classList.add('hidden');
+  document.getElementById('adminPage').classList.add('hidden');
+  document.getElementById('archivePage').classList.add('hidden');
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+// 初始化本地存储
+function initializeStorage() {
+  if (!localStorage.getItem('userArchives')) {
+    localStorage.setItem('userArchives', JSON.stringify({}));
+    console.log('初始化本地存储');
+  }
+}
+
+// 登录表单提交 - 简化版本
+document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
+  console.log('登录表单提交');
   
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value.trim();
   const inviteCode = document.getElementById('inviteCode').value.trim();
   const errorMessage = document.getElementById('errorMessage');
   
-  // 隐藏错误信息
   errorMessage.textContent = '';
-  
-  console.log('登录尝试:', { username, password, inviteCode });
   
   // 检查邀请码
   if (inviteCode !== 'FAIS') {
-    errorMessage.textContent = '邀请码错误！请输入正确的邀请码。';
+    errorMessage.textContent = '邀请码错误！请输入FAIS';
+    console.log('邀请码错误');
     return;
   }
   
   // 检查是否填写了姓名和密码
   if (!username || !password) {
     errorMessage.textContent = '请输入姓名和密码！';
+    console.log('用户名或密码为空');
     return;
   }
   
-  // 加载共享数据
-  const sharedData = await loadFromJsonBin();
+  console.log('登录信息验证通过');
   
   // 检查管理员登录
   if (username === 'Succubus' && password === '100114514') {
     console.log('管理员登录成功');
+    initializeStorage();
     
-    // 管理员登录时也创建自己的档案
-    if (!sharedData.users[username]) {
-      sharedData.users[username] = {
+    const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+    if (!userArchives[username]) {
+      userArchives[username] = {
         username: username,
         archiveData: {
           name: 'Succubus',
@@ -794,7 +849,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
           photoData: ''
         }
       };
-      await saveToJsonBin(sharedData);
+      localStorage.setItem('userArchives', JSON.stringify(userArchives));
     }
     localStorage.setItem('currentUser', username);
     showArchivePage();
@@ -802,11 +857,12 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   }
   
   // 普通用户登录
-  console.log('普通用户登录成功:', username);
+  console.log('普通用户登录:', username);
+  initializeStorage();
   
-  // 保存用户信息
-  if (!sharedData.users[username]) {
-    sharedData.users[username] = {
+  const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+  if (!userArchives[username]) {
+    userArchives[username] = {
       username: username,
       archiveData: {
         name: '「待填」',
@@ -821,30 +877,20 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         photoData: ''
       }
     };
-    await saveToJsonBin(sharedData);
+    localStorage.setItem('userArchives', JSON.stringify(userArchives));
   }
   
-  // 保存当前登录用户
   localStorage.setItem('currentUser', username);
   showWelcomePage();
 });
 
-// 其余函数保持不变（showWelcomePage、showAdminPage等）
-// 这里继续粘贴原有的所有其他函数...
-// 包括：showWelcomePage, showAdminPage, enterArchive, showArchivePage, 
-// loadUserGrid, showDeleteModal, confirmDelete, cancelDelete, editUserArchive,
-// backToAdmin, backToLogin, backToLoginFromArchive, previewImage, loadArchiveData,
-// saveArchiveData, adminSaveArchive, cancelEdit, saveUserArchiveData 等函数
-
-// 请确保粘贴所有原有的函数，只替换开头的配置和两个数据存储函数
-
-// 修改loadUserGrid函数
-async function loadUserGrid() {
-  const sharedData = await loadFromJsonBin();
+// 其余必要函数
+function loadUserGrid() {
+  const userArchives = JSON.parse(localStorage.getItem('userArchives'));
   const userGrid = document.getElementById('userGrid');
   userGrid.innerHTML = '';
   
-  for (const username in sharedData.users) {
+  for (const username in userArchives) {
     const userCard = document.createElement('div');
     userCard.className = 'user-card';
     
@@ -854,10 +900,9 @@ async function loadUserGrid() {
     
     const archiveName = document.createElement('div');
     archiveName.className = 'archive-name';
-    const archiveNameText = sharedData.users[username].archiveData.name;
+    const archiveNameText = userArchives[username].archiveData.name;
     archiveName.textContent = `档案名: ${archiveNameText === '「待填」' ? '未设置' : archiveNameText}`;
     
-    // 添加删除按钮（管理员不能删除自己）
     if (username !== 'Succubus') {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'delete-btn';
@@ -878,10 +923,89 @@ async function loadUserGrid() {
   }
 }
 
-// 修改加载档案数据函数
-async function loadArchiveData(username) {
-  const sharedData = await loadFromJsonBin();
-  const userData = sharedData.users[username];
+function showDeleteModal(username) {
+  userToDelete = username;
+  const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+  const archiveName = userArchives[username].archiveData.name;
+  const displayName = archiveName === '「待填」' ? username : archiveName;
+  
+  document.getElementById('deleteModalMessage').textContent = 
+    `您确定要删除用户 "${displayName}" 的档案吗？此操作不可恢复！`;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function confirmDelete() {
+  if (userToDelete) {
+    const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+    delete userArchives[userToDelete];
+    localStorage.setItem('userArchives', JSON.stringify(userArchives));
+    loadUserGrid();
+    cancelDelete();
+    alert('档案删除成功！');
+  }
+}
+
+function cancelDelete() {
+  userToDelete = null;
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function editUserArchive(username) {
+  console.log('编辑用户档案:', username);
+  localStorage.setItem('currentEditUser', username);
+  showArchivePage(username);
+}
+
+function backToAdmin() {
+  console.log('返回管理员后台');
+  localStorage.removeItem('currentEditUser');
+  showAdminPage();
+}
+
+function backToLogin() {
+  console.log('返回登录页面');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('currentEditUser');
+  showLoginPage();
+}
+
+function backToLoginFromArchive() {
+  console.log('从档案页面返回登录');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('currentEditUser');
+  showLoginPage();
+}
+
+function previewImage(event) {
+  const input = event.target;
+  const placeholder = document.querySelector('.photo-placeholder');
+  const preview = document.getElementById('photoPreview');
+  
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+      
+      const currentUser = localStorage.getItem('currentUser') || localStorage.getItem('currentEditUser');
+      if (currentUser) {
+        const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+        if (userArchives[currentUser]) {
+          userArchives[currentUser].archiveData.photoData = e.target.result;
+          localStorage.setItem('userArchives', JSON.stringify(userArchives));
+        }
+      }
+    }
+    
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function loadArchiveData(username) {
+  const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+  const userData = userArchives[username];
   
   if (userData && userData.archiveData) {
     const data = userData.archiveData;
@@ -895,7 +1019,6 @@ async function loadArchiveData(username) {
     document.getElementById('lastUpdate').textContent = data.lastUpdate;
     document.getElementById('archiveNumber').textContent = data.archiveNumber;
     
-    // 加载图片
     const preview = document.getElementById('photoPreview');
     const placeholder = document.querySelector('.photo-placeholder');
     if (data.photoData) {
@@ -907,7 +1030,6 @@ async function loadArchiveData(username) {
       placeholder.style.display = 'flex';
     }
     
-    // 移除占位符样式
     const elements = document.querySelectorAll('.editable');
     elements.forEach(el => {
       if (el.textContent !== '「待填」' && el.textContent !== 'PA-XXXX-XXXX' && el.textContent !== 'XXXX年XX月XX日') {
@@ -917,94 +1039,55 @@ async function loadArchiveData(username) {
   }
 }
 
-// 修改保存档案数据函数
-async function saveArchiveData() {
+function saveArchiveData() {
   const currentUser = localStorage.getItem('currentUser');
   if (!currentUser) return;
   
-  const success = await saveUserArchiveData(currentUser);
-  if (success) {
-    alert('档案保存成功！');
-  } else {
-    alert('档案保存到云端失败，已保存到本地！');
-  }
+  saveUserArchiveData(currentUser);
+  alert('档案保存成功！');
 }
 
-// 修改管理员保存档案数据函数
-async function adminSaveArchive() {
+function adminSaveArchive() {
   const currentEditUser = localStorage.getItem('currentEditUser') || localStorage.getItem('currentUser');
   if (!currentEditUser) return;
   
-  const success = await saveUserArchiveData(currentEditUser);
-  if (success) {
-    alert('档案保存成功！');
-  } else {
-    alert('档案保存到云端失败，已保存到本地！');
-  }
+  saveUserArchiveData(currentEditUser);
+  alert('档案保存成功！');
   backToAdmin();
 }
 
-// 修改通用的保存档案数据函数
-async function saveUserArchiveData(username) {
-  try {
-    const sharedData = await loadFromJsonBin();
+function cancelEdit() {
+  backToAdmin();
+}
+
+function saveUserArchiveData(username) {
+  const userArchives = JSON.parse(localStorage.getItem('userArchives'));
+  if (userArchives[username]) {
+    const preview = document.getElementById('photoPreview');
+    const photoData = preview.style.display !== 'none' ? preview.src : '';
     
-    if (sharedData.users[username]) {
-      // 保存图片数据
-      const preview = document.getElementById('photoPreview');
-      const photoData = preview.style.display !== 'none' ? preview.src : '';
-      
-      sharedData.users[username].archiveData = {
-        name: document.getElementById('archiveName').textContent,
-        gender: document.getElementById('archiveGender').textContent,
-        age: document.getElementById('archiveAge').textContent,
-        height: document.getElementById('archiveHeight').textContent,
-        attribute: document.getElementById('archiveAttribute').textContent,
-        codeName: document.getElementById('archiveCodeName').textContent,
-        archiveInfo: document.getElementById('archiveInfo').value,
-        lastUpdate: document.getElementById('lastUpdate').textContent,
-        archiveNumber: document.getElementById('archiveNumber').textContent,
-        photoData: photoData
-      };
-      
-      return await saveToJsonBin(sharedData);
-    }
-    return false;
-  } catch (error) {
-    console.error('保存数据失败:', error);
-    return false;
+    userArchives[username].archiveData = {
+      name: document.getElementById('archiveName').textContent,
+      gender: document.getElementById('archiveGender').textContent,
+      age: document.getElementById('archiveAge').textContent,
+      height: document.getElementById('archiveHeight').textContent,
+      attribute: document.getElementById('archiveAttribute').textContent,
+      codeName: document.getElementById('archiveCodeName').textContent,
+      archiveInfo: document.getElementById('archiveInfo').value,
+      lastUpdate: document.getElementById('lastUpdate').textContent,
+      archiveNumber: document.getElementById('archiveNumber').textContent,
+      photoData: photoData
+    };
+    localStorage.setItem('userArchives', JSON.stringify(userArchives));
   }
 }
 
-// 修改确认删除函数
-async function confirmDelete() {
-  if (userToDelete) {
-    try {
-      const sharedData = await loadFromJsonBin();
-      delete sharedData.users[userToDelete];
-      const success = await saveToJsonBin(sharedData);
-      
-      if (success) {
-        // 重新加载用户列表
-        await loadUserGrid();
-        cancelDelete();
-        alert('档案删除成功！');
-      } else {
-        alert('删除失败，请重试！');
-      }
-    } catch (error) {
-      alert('删除失败：' + error.message);
-    }
-  }
-}
-
-// 修改初始化函数
+// 初始化
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('页面加载完成');
   initializeStorage();
   
-  // 可编辑区域的智能占位符功能
   const editableElements = document.querySelectorAll('.editable');
-  
   editableElements.forEach(element => {
     element.addEventListener('click', function() {
       if (this.classList.contains('placeholder')) {
@@ -1029,7 +1112,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // 防止不可编辑区域的文本被选择
   const nonEditableElements = document.querySelectorAll('.non-editable');
   nonEditableElements.forEach(element => {
     element.addEventListener('mousedown', function(e) {
@@ -1037,5 +1119,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
-    </script>
+ </script>
 </body>
