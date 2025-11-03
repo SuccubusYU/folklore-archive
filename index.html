@@ -716,70 +716,35 @@
     </div>
 
 <script>
-    // 配置jsonbin.io - 请替换为您的实际信息
+    // 完全使用本地存储（手机友好版）
 const JSONBIN_CONFIG = {
-  BIN_ID: '6908f3c4ae596e708f4237e0', // 替换为您的Bin ID
-  API_KEY: '$2a$10$g7DKdKCewYmzyOvyYXt6LeDlSff7kDdWRqUJaexE/gWUbsE3qgZlS' // 替换为您的API密钥
+  BIN_ID: '6908f3c4ae596e708f4237e0',
+  API_KEY: '$2a$10$g7DKdKCewYmzyOvyYXt6LeDlSff7kDdWRqUJaexE/gWUbsE3qgZlS' // 您的完整API Key
 };
 
-// 初始化本地存储（作为备用）
-function initializeStorage() {
-  if (!localStorage.getItem('userArchives')) {
-    localStorage.setItem('userArchives', JSON.stringify({}));
-  }
-}
-
-// 保存数据到jsonbin.io
+// 始终使用本地存储
 async function saveToJsonBin(data) {
-  try {
-    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': JSONBIN_CONFIG.API_KEY
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (!response.ok) {
-      throw new Error('网络请求失败');
-    }
-    
-    const result = await response.json();
-    console.log('数据保存成功:', result);
-    return true;
-  } catch (error) {
-    console.error('保存到jsonbin失败，使用本地存储:', error);
-    // 失败时使用本地存储作为备用
-    localStorage.setItem('userArchives', JSON.stringify(data));
-    return false;
-  }
+  console.log('使用本地存储保存');
+  localStorage.setItem('userArchives', JSON.stringify(data));
+  return true;
 }
 
-// 从jsonbin.io加载数据
 async function loadFromJsonBin() {
-  try {
-    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.BIN_ID}/latest`);
-    
-    if (!response.ok) {
-      throw new Error('网络请求失败');
-    }
-    
-    const result = await response.json();
-    console.log('数据加载成功:', result);
-    return result.record;
-  } catch (error) {
-    console.error('从jsonbin加载失败，使用本地存储:', error);
-    // 失败时使用本地存储作为备用
-    const localData = localStorage.getItem('userArchives');
-    return localData ? JSON.parse(localData) : { users: {} };
-  }
+  console.log('从本地存储加载');
+  const localData = localStorage.getItem('userArchives');
+  const result = localData ? JSON.parse(localData) : { users: {} };
+  
+  // 在手机上显示当前用户数量
+  const userCount = Object.keys(result.users || {}).length;
+  console.log(`当前用户数: ${userCount}`);
+  
+  return result;
 }
 
 // 删除相关变量
 let userToDelete = null;
 
-// 登录表单提交 - 需要修改
+// 登录表单提交
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   
@@ -863,6 +828,15 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   localStorage.setItem('currentUser', username);
   showWelcomePage();
 });
+
+// 其余函数保持不变（showWelcomePage、showAdminPage等）
+// 这里继续粘贴原有的所有其他函数...
+// 包括：showWelcomePage, showAdminPage, enterArchive, showArchivePage, 
+// loadUserGrid, showDeleteModal, confirmDelete, cancelDelete, editUserArchive,
+// backToAdmin, backToLogin, backToLoginFromArchive, previewImage, loadArchiveData,
+// saveArchiveData, adminSaveArchive, cancelEdit, saveUserArchiveData 等函数
+
+// 请确保粘贴所有原有的函数，只替换开头的配置和两个数据存储函数
 
 // 修改loadUserGrid函数
 async function loadUserGrid() {
